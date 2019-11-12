@@ -1,0 +1,28 @@
+{
+    "name": "RESTful-server",
+    "version": "0.0.0",
+    "description": "RESTful Web Server using Node JS",
+    "author": {
+        "name": "Abby Westphal",
+        "email": "west8659@stthomas.edu"
+    },
+    "contributors": [
+        {
+            "name": "Abby Westphal",
+            "email": "west8659@stthomas.edu"
+        },
+        {
+            "name": "Danielle Pierre",
+            "email": "pier8785@stthomas.edu"
+        }
+    ],
+    "main": "server.js",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/a-westphal/RESTful-Web-Server"
+    },
+    "dependencies": {
+        "express": "^4.17.1",
+        "sqlite3": "^4.1.0"
+    }
+}
