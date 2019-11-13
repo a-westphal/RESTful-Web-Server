@@ -1,10 +1,12 @@
 // Built-in Node.js modules
-var fs = require('fs')
-var path = require('path')
+var fs = require('fs');
+var path = require('path');
 
 // NPM modules
-var express = require('express')
-var sqlite3 = require('sqlite3')
+var express = require('express');
+var sqlite3 = require('sqlite3');
+//var bodyParser = require('body-parser');
+
 
 
 var public_dir = path.join(__dirname, 'public');
@@ -39,11 +41,14 @@ app.get('/codes',(req,res) =>{
 				codes[row.code] = row.incident_type;
 			})
 
+			resolve(codes);
+
 		});
 
 	})
 	database_Promise.then(data=>{
-
+		//check if the query string specifices the format type here (to be added later)
+		res.type('json').send(codes);
 	})
 
 }); 
@@ -58,8 +63,15 @@ app.get('/neighborhoods',(req,res)=>{
 				neighborhoods[row.neighborhood_number] = row.neighborhood_name;
 			})
 
+			resolve(neighborhoods);
+
 		});
 
+	})
+
+	database_Promise.then(data => {
+		//check if the query string specifies the format type here (to be added later)
+		res.type('json').send(neighborhoods);
 	})
 
 });
@@ -71,16 +83,22 @@ app.get('/incidents',(req,res)=>{
 		db.all('SELECT * FROM Incidents ORDER BY case_number DESC',(err,rows)=>{
 			rows.forEach(function(row){
 				//for each case number, a new Object 
+				let case_number = row.case_number;
 				incidents[case_number] = new Object();
-				incidents[case_number][date_time] = row.date_time;
-				incidents[case_number][code] = row.code;
-				incidents[case_number][incident] = row.incident;
-				incidents[case_number][police_grid] = row.police_grid;
-				incidents[case_number][neighborhood_number] = row.neighborhood_number;
-				incidents[case_number][block] = row.block;
+				incidents[case_number]["date_time"] = row.date_time;
+				incidents[case_number]["code"] = row.code;
+				incidents[case_number]["incident"] = row.incident;
+				incidents[case_number]["police_grid"] = row.police_grid;
+				incidents[case_number]["neighborhood_number"] = row.neighborhood_number;
+				incidents[case_number]["block"] = row.block;
 			})
 
+			resolve(incidents);
 		});
+	})
+	database_Promise.then(data =>{
+		//check if the query string specifies the format type here (to be added later)
+		res.type('json').send(incidents);
 	})
 
 });
@@ -100,6 +118,7 @@ app.put('new-incident',(req,res)=>{
 				incidents[case_number][neighborhood_number] = row.neighborhood_number;
 				incidents[case_number][block] = row.block;
 			})
+			resolve(incidents);
 
 		});
 	})
@@ -114,6 +133,16 @@ app.put('new-incident',(req,res)=>{
 		new_incident[new_casenum][neighborhood_number]=parseInt(req.body.neighborhood_number,10);
 		new_incident[new_casenum][block] = req.body.block;
 
+
+		if(incidents.hasOwnProperty(new_casenum))
+		{
+			//if the case number already exists
+			//reject with status 500
+			res.writeHead(500,{'Content-Type':'text/plain'});
+			res.write('Case number to input already exists');
+			res.end();
+		}
+
 		//add the new incident into the incident object
 		incidents.push(new_incident);
 		/*	db.run(`INSERT INTO Incidents(new_incident) VALUES(?)`,function(err){
@@ -124,6 +153,9 @@ app.put('new-incident',(req,res)=>{
 		})
 
 		*/ 
+		//check if the format string specifies a format (to be added later)
+		res.type('json').send(incidents);
+
 	})
 });
 
