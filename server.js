@@ -151,22 +151,21 @@ app.get('/incidents',(req,res)=>{
 	var url = req.url;
 	console.log(url.length);
 	var database_Promise = new Promise ((resolve,reject) =>{
+		var count = 0;
 		db.all('SELECT * FROM Incidents ORDER BY case_number DESC',(err,rows)=>{
 			rows.forEach(function(row){
 				//for each case number, a new Object
 				let add = "I"; 
 				let case_number = add.concat("",row.case_number);
+				let date_time = row.date_time.split("T");
 
 				if(url.length > 10 && req.query.hasOwnProperty("id")){
 						
 					var select_id =  req.query.id.split(',');
-					//console.log("selected codes:" + select_id);
-					//console.log("db row: " +row.neighborhood_number);
 					for(let i =0; i < select_id.length; i ++)
 					{
 						if(row.neighborhood_number == select_id[i])
 						{
-							//console.log("row id is:" + row.neighborhood_number);
 							incidents[case_number] = new Object();
 							incidents[case_number]["date"] = date_time[0];
 							incidents[case_number]["time"] = date_time[1];
@@ -201,13 +200,77 @@ app.get('/incidents',(req,res)=>{
 
 				else if(url.length > 10 && req.query.hasOwnProperty("code"))
 				{
-
+					var select_code = req.query.code.split(',');
+					for(let i =0; i < select_code.length; i++)
+					{
+						if(row.code == select_code[i])
+						{
+							incidents[case_number] = new Object();
+							incidents[case_number]["date"] = date_time[0];
+							incidents[case_number]["time"] = date_time[1];
+							incidents[case_number]["code"] = select_code[i];
+							incidents[case_number]["incident"] = row.incident;
+							incidents[case_number]["police_grid"] = row.police_grid;
+							incidents[case_number]["neighborhood_number"] = row.neighborhood_number;
+							incidents[case_number]["block"] = row.block;
+						}
+					}
 				}
 
-				//need code, start and end date, limit check
+				else if(url.length > 10 && req.query.hasOwnProperty("start_date"))
+				{
+					let start = req.query.start_date;
+					if(row.date >= start)
+					{
+						incidents[case_number] = new Object();
+						incidents[case_number]["date"] = date_time[0];
+						incidents[case_number]["time"] = date_time[1];
+						incidents[case_number]["code"] = row.code;
+						incidents[case_number]["incident"] = row.incident;
+						incidents[case_number]["police_grid"] = row.police_grid;
+						incidents[case_number]["neighborhood_number"] = row.neighborhood_number;
+						incidents[case_number]["block"] = row.block;
+					}
+				}
+
+				else if(url.length > 10 && req.query.hasOwnProperty("end_date"))
+				{
+					let end = req.query.end_date;
+					if(row.date <= end)
+					{
+						incidents[case_number] = new Object();
+						incidents[case_number]["date"] = date_time[0];
+						incidents[case_number]["time"] = date_time[1];
+						incidents[case_number]["code"] = row.code;
+						incidents[case_number]["incident"] = row.incident;
+						incidents[case_number]["police_grid"] = row.police_grid;
+						incidents[case_number]["neighborhood_number"] = row.neighborhood_number;
+						incidents[case_number]["block"] = row.block;
+					}
+				}
+
+				else if(url.length > 10 && req.query.hasOwnProperty("limit"))
+				{	
+					//since we are in a db pull, we can just count each row until the limit is reached 
+					let limit = req.query.limit;
+					if(count < limit)
+					{	
+						incidents[case_number] = new Object();
+						incidents[case_number]["date"] = date_time[0];
+						incidents[case_number]["time"] = date_time[1];
+						incidents[case_number]["code"] = row.code;
+						incidents[case_number]["incident"] = row.incident;
+						incidents[case_number]["police_grid"] = row.police_grid;
+						incidents[case_number]["neighborhood_number"] = row.neighborhood_number;
+						incidents[case_number]["block"] = row.block;
+					}
+
+					count++;
+				}
+
+				//need start and end date
 
 				else{
-					let date_time = row.date_time.split("T");
 					incidents[case_number] = new Object();
 					incidents[case_number]["date"] = date_time[0];
 					incidents[case_number]["time"] = date_time[1];
@@ -233,8 +296,18 @@ app.get('/incidents',(req,res)=>{
 
 //PUT /new-incident
 app.put('new-incident',(req,res)=>{
-	var incidents = new Object();
-	var database_Promise = new Promise((resolve,reject)=>{
+	var new_incident = new Object();
+	new_casenum = parseInt(req.body.case_number,10)
+	new_incident[new_casenum] = new Object();
+	new_incident[new_casenum][date_time] = req.body.date_time;
+	new_incident[new_casenum][code] = parseInt(req.body.code,10);
+	new_incident[new_casenum][incident] = req.body.incident;
+	new_incident[new_casenum][police_grid] = parseInt(req.body.police_grid,10);
+	new_incident[new_casenum][neighborhood_number]=parseInt(req.body.neighborhood_number,10);
+	new_incident[new_casenum][block] = req.body.block;
+
+
+	/*var database_Promise = new Promise((resolve,reject)=>{
 		db.all('SELECT * FROM Incidents ORDER BY case_number DESC',(err,rows)=>{
 			rows.forEach(function(row){
 				//for each case number, a new Object 
@@ -280,11 +353,11 @@ app.put('new-incident',(req,res)=>{
 
 		})
 
-		*/ 
+		 
 		//check if the format string specifies a format (to be added later)
 		res.type('json').send(incidents);
 
-	})
+	})*/
 });
 
 var server = app.listen(port);
