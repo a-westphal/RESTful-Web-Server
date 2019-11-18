@@ -305,59 +305,7 @@ app.put('new-incident',(req,res)=>{
 	new_incident[new_casenum][police_grid] = parseInt(req.body.police_grid,10);
 	new_incident[new_casenum][neighborhood_number]=parseInt(req.body.neighborhood_number,10);
 	new_incident[new_casenum][block] = req.body.block;
-
-
-	/*var database_Promise = new Promise((resolve,reject)=>{
-		db.all('SELECT * FROM Incidents ORDER BY case_number DESC',(err,rows)=>{
-			rows.forEach(function(row){
-				//for each case number, a new Object 
-				incidents[case_number] = new Object();
-				incidents[case_number][date_time] = row.date_time;
-				incidents[case_number][code] = row.code;
-				incidents[case_number][incident] = row.incident;
-				incidents[case_number][police_grid] = row.police_grid;
-				incidents[case_number][neighborhood_number] = row.neighborhood_number;
-				incidents[case_number][block] = row.block;
-			})
-			resolve(incidents);
-
-		});
-	})
-	database_Promise.then(data=>{
-		var new_incident = new Object();
-		new_casenum = parseInt(req.body.case_number,10)
-		new_incident[new_casenum] = new Object();
-		new_incident[new_casenum][date_time] = req.body.date_time;
-		new_incident[new_casenum][code] = parseInt(req.body.code,10);
-		new_incident[new_casenum][incident] = req.body.incident;
-		new_incident[new_casenum][police_grid] = parseInt(req.body.police_grid,10);
-		new_incident[new_casenum][neighborhood_number]=parseInt(req.body.neighborhood_number,10);
-		new_incident[new_casenum][block] = req.body.block;
-
-
-		if(incidents.hasOwnProperty(new_casenum))
-		{
-			//if the case number already exists
-			//reject with status 500
-			res.writeHead(500,{'Content-Type':'text/plain'});
-			res.write('Case number to input already exists');
-			res.end();
-		}
-
-		//add the new incident into the incident object
-		incidents.push(new_incident);
-		/*	db.run(`INSERT INTO Incidents(new_incident) VALUES(?)`,function(err){
-		if(err){
 	
-		}
-
-		})
-
-		 
-		//check if the format string specifies a format (to be added later)
-		res.type('json').send(incidents);
-
-	})*/
 });
 
 var server = app.listen(port);
