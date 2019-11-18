@@ -147,7 +147,6 @@ app.get('/neighborhoods',(req,res)=>{
 //GET /incidents
 app.get('/incidents',(req,res)=>{
 	//we want the most recent incident number first: 
-
 	var url = req.url;
 	console.log(url.length);
 	var database_Promise = new Promise ((resolve,reject) =>{
@@ -160,6 +159,7 @@ app.get('/incidents',(req,res)=>{
 				let date_time = row.date_time.split("T");
 
 				if(url.length > 10 && req.query.hasOwnProperty("id")){
+					console.log(" in id else");
 						
 					var select_id =  req.query.id.split(',');
 					for(let i =0; i < select_id.length; i ++)
@@ -180,6 +180,7 @@ app.get('/incidents',(req,res)=>{
 
 				else if(url.length > 10 && req.query.hasOwnProperty("grid"))
 				{
+					console.log("in grid else");
 					var select_grid = req.query.grid.split(',');
 					for(let i =0; i < select_id.length; i ++)
 					{
@@ -200,6 +201,7 @@ app.get('/incidents',(req,res)=>{
 
 				else if(url.length > 10 && req.query.hasOwnProperty("code"))
 				{
+					console.log("in code else");
 					var select_code = req.query.code.split(',');
 					for(let i =0; i < select_code.length; i++)
 					{
@@ -219,6 +221,7 @@ app.get('/incidents',(req,res)=>{
 
 				else if(url.length > 10 && req.query.hasOwnProperty("start_date"))
 				{
+					console.log("in start else");
 					let start = req.query.start_date;
 					if(row.date >= start)
 					{
@@ -235,6 +238,7 @@ app.get('/incidents',(req,res)=>{
 
 				else if(url.length > 10 && req.query.hasOwnProperty("end_date"))
 				{
+					console.log("in end date else");
 					let end = req.query.end_date;
 					if(row.date <= end)
 					{
@@ -252,7 +256,9 @@ app.get('/incidents',(req,res)=>{
 				else if(url.length > 10 && req.query.hasOwnProperty("limit"))
 				{	
 					//since we are in a db pull, we can just count each row until the limit is reached 
+					console.log("in limit else");
 					let limit = req.query.limit;
+
 					if(count < limit)
 					{	
 						incidents[case_number] = new Object();
@@ -271,19 +277,27 @@ app.get('/incidents',(req,res)=>{
 				//need start and end date
 
 				else{
-					incidents[case_number] = new Object();
-					incidents[case_number]["date"] = date_time[0];
-					incidents[case_number]["time"] = date_time[1];
-					incidents[case_number]["code"] = row.code;
-					incidents[case_number]["incident"] = row.incident;
-					incidents[case_number]["police_grid"] = row.police_grid;
-					incidents[case_number]["neighborhood_number"] = row.neighborhood_number;
-					incidents[case_number]["block"] = row.block;
+
+					console.log("count = "  + count);
+					if(count <= 10000)
+					{
+						incidents[case_number] = new Object();
+						incidents[case_number]["date"] = date_time[0];
+						incidents[case_number]["time"] = date_time[1];
+						incidents[case_number]["code"] = row.code;
+						incidents[case_number]["incident"] = row.incident;
+						incidents[case_number]["police_grid"] = row.police_grid;
+						incidents[case_number]["neighborhood_number"] = row.neighborhood_number;
+						incidents[case_number]["block"] = row.block;
+						count = count + 1;
+					}
+
 				}
 
 				
 			})
 
+			console.log("final count = " + count);
 			resolve(incidents);
 		});
 	})
@@ -296,16 +310,80 @@ app.get('/incidents',(req,res)=>{
 
 //PUT /new-incident
 app.put('new-incident',(req,res)=>{
+
 	var new_incident = new Object();
-	new_casenum = parseInt(req.body.case_number,10)
+	var new_casenum = parseInt(req.body.case_number,10)
+	var date_time = req.body.date_time.split("T");
+
+	var new_code = parseInt(req.body.code,10);
+	var new_incident = req.body.incident;
+	var new_grid = parseInt(req.body.police_grid,10);
+	var new_neighborhood = parseInt(req.body.neighborhood_number,10);
+	var new_block = req.body.block;
+
 	new_incident[new_casenum] = new Object();
-	new_incident[new_casenum][date_time] = req.body.date_time;
-	new_incident[new_casenum][code] = parseInt(req.body.code,10);
-	new_incident[new_casenum][incident] = req.body.incident;
-	new_incident[new_casenum][police_grid] = parseInt(req.body.police_grid,10);
-	new_incident[new_casenum][neighborhood_number]=parseInt(req.body.neighborhood_number,10);
-	new_incident[new_casenum][block] = req.body.block;
-	
+	new_incident[new_casenum][date] = date_time[0];
+	new_incident[new_casenum][time] = date_time[1]
+	new_incident[new_casenum][code] = new_code;
+	new_incident[new_casenum][incident] = new_incident;
+	new_incident[new_casenum][police_grid] = new_grid;
+	new_incident[new_casenum][neighborhood_number]=new_neighborhood;
+	new_incident[new_casenum][block] = new_block;
+
+	var incident_pull = new Promise((resolve,reject) =>{
+		db.all('SELECT * FROM Incidents ORDER BY case_number DESC',(err,rows)=>{
+			rows.forEach(function(row){
+				//for each case number, a new Object
+				let add = "I"; 
+				let case_number = add.concat("",row.case_number);
+				let date_time = row.date_time.split("T");
+
+				incidents[case_number] = new Object();
+				incidents[case_number]["date"] = date_time[0];
+				incidents[case_number]["time"] = date_time[1];
+				incidents[case_number]["code"] = row.code;
+				incidents[case_number]["incident"] = row.incident;
+				incidents[case_number]["police_grid"] = row.police_grid;
+				incidents[case_number]["neighborhood_number"] = row.neighborhood_number;
+				incidents[case_number]["block"] = row.block;
+			})
+
+			resolve(incidents);
+		
+		})
+
+	})
+	incident_pull.then(data =>{
+		db.run('INSERT INTO Incidents(case_number,date,time,code,incident,police_grid,neighborhood_number,block) VALUES(new_casenum,date_time[0],date_time[1],new_code,new_incident,new_grid,new_neighborhood,new_block', ['C'],function(err){
+		
+			//check if there is already a case number that matches the one to be inserted in the db
+			for(let i =0; i < data.length; i ++)
+			{
+				if(data[i] == new_casenum)
+				{
+					res.writeHead(500, {'Content-Type': 'text/plain'});
+    				res.write('Error: case number already within database');
+    				res.end();
+				}
+			}
+
+			if(err)
+			{
+				res.writeHead(404, {'Content-Type': 'text/plain'});
+    			res.write('Error: could not write to database');
+    			res.end();
+			}	
+
+			else{
+				res.writeHead({'Content-Type':'text/plain'})
+				res.write('Input to database successful!');
+				res.end();
+			}
+		
+		})
+
+	});
+
 });
 
 var server = app.listen(port);
