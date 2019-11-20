@@ -16,7 +16,7 @@ var app = express();
 var port = 8000;
 
 // open stpaul_crime.sqlite3 database
-var db = new sqlite3.Database(db_filename, sqlite3.OPEN_READONLY, (err) => {
+var db = new sqlite3.Database(db_filename, sqlite3.OPEN_READWRITE, (err) => {
     if (err) {
         console.log('Error opening ' + db_filename);
     }
@@ -301,7 +301,7 @@ app.put('/new-incident',(req,res)=>{
 
 	var new_incident = new Object();
 	var new_casenum = parseInt(req.body.case_number,10);
-	var copy_casenum = new_casenum;
+	//var copy_casenum = new_casenum;
 	var date = req.body.date
 	var time = req.body.time;
 
@@ -311,34 +311,23 @@ app.put('/new-incident',(req,res)=>{
 	var new_neighborhood = parseInt(req.body.neighborhood_number,10);
 	var new_block = req.body.block;
 
-	new_incident[new_casenum] = new Object();
-	new_incident[new_casenum]["date"] = date;
-	new_incident[new_casenum]["time"] = time;
-	new_incident[new_casenum]["code"] = new_code;
-	new_incident[new_casenum]["incident"] = new_incident;
-	new_incident[new_casenum]["police_grid"] = new_grid;
-	new_incident[new_casenum]["neighborhood_number"]=new_neighborhood;
-	new_incident[new_casenum]["block"] = new_block;
-
 	new_datetime = date.concat("T",time);
 
 	var incident_pull = new Promise((resolve,reject) =>{
+		var incidents = new Object ();
 		db.all('SELECT * FROM Incidents ORDER BY case_number DESC',(err,rows)=>{
 			rows.forEach(function(row){
 
-				var incidents = new Object ();
 				let add = "I"; 
 				let case_number = add.concat("",row.case_number);
 				//date_time split by the T to have the date and time separately
 				let date_time = row.date_time.split("T");	
 
 				//error checking for a pre-existing case number trying to be inserted: 
-				if(new_casenum == row.case_number)
+			/*	if(new_casenum == row.case_number)
 				{
-					res.writeHead(500, {'Content-Type': 'text/plain'});
-	    			res.write('Error: case number already within database: ' + new_casenum);
-	    			res.end();
-				}
+					reject(new_casenum);
+				}*/ 
 
 				incidents[case_number] = new Object();
 				incidents[case_number]["date"] = date_time[0];
@@ -350,39 +339,41 @@ app.put('/new-incident',(req,res)=>{
 				incidents[case_number]["block"] = row.block;
 
 			})
-			console.log("before resolve");
-			resolve();
-		})
-	}); //database promise
 
+			resolve(incidents);
+		})
+	});
 	//we've already checked the casenumber, now insert into the table:
 	incident_pull.then(data =>{
 
-		var pull_Promise = new Promise((resolve,reject) =>{
-			db.run('INSERT INTO Incidents(case_number,date_time,code,incident,police_grid,neighborhood_number,block) VALUES(case_number,new_datetime,new_code,new_incident,new_grid,new_neighborhood,new_block)', ['C'],function(err){
-			//check if there is already a case number that matches the one to be inserted in the db
-			//
-				console.log("error is " + err);
+		
 
+		var pull_Promise = new Promise((resolve,reject) =>{
+			db.run('INSERT INTO Incidents(case_number,date_time,code,incident,police_grid,neighborhood_number,block) VALUES(?,?,?,?,?,?,?)', [new_casenum,new_datetime,new_code,new_incident_type,new_grid,new_neighborhood,new_block],function(err){
+			//check if there is already a case number that matches the one to be inserted in the db
+
+				console.log(err);
 				if(err)
 				{
 					res.writeHead(404, {'Content-Type': 'text/plain'});
     				res.write('Error: could not write to database\n');
     				res.end();
 				}	
+			
 		
 			});//db run
 
-		}).then(data=>{
-
-			res.writeHead({'Content-Type':'text/plain'})
-			res.write('Input to database successful!');
-			res.end();
-			
 		})
 
-	}); //incident_pull.then
+	})
 
 });//app.PUT
+
+function FoundMatchingCasenum(res, number)
+{
+	res.writeHead(500, {'Content-Type': 'text/plain'});
+	res.write('Error: case number already within database: ' + number + "\n");
+	res.end();
+}
 
 var server = app.listen(port);
