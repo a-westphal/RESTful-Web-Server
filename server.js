@@ -6,7 +6,7 @@ var path = require('path');
 var express = require('express');
 var sqlite3 = require('sqlite3');
 var bodyParser = require('body-parser');
-//xml variable?
+var js2xmlparser = require('js2xmlparser');
 
 var public_dir = path.join(__dirname, 'public');
 var template_dir = path.join(__dirname, 'templates');
@@ -30,15 +30,12 @@ app.use(bodyParser.urlencoded({extended: true}));
 
 /*	JSON objects for the codes, neighborhoods and incidents to be filled
 	by database pulls */ 
-var codes = new Object();
-var neighborhoods = new Object();
-var incidents = new Object();
 
 //GET /codes
 app.get('/codes',(req,res) =>{
 	//use the url to check the specific extra elements:
 	var url =req.url;
-
+	var codes = new Object();
 	var database_Promise = new Promise ((resolve,reject)=>{
 		db.all('SELECT * FROM Codes ORDER BY code',(err,rows)=>{
 			rows.forEach(function (row){
@@ -49,18 +46,14 @@ app.get('/codes',(req,res) =>{
 				if(url.length > 6 && req.query.hasOwnProperty("code")){
 						
 					var select_code =  req.query.code.split(',');
-					console.log("selected codes:" + select_code);
-					console.log("db row: " +row.code);
 					for(let i =0; i < select_code.length; i ++)
 					{
 						if(row.code == select_code[i])
 						{
-							console.log("row code is:" + row.code);
 							codes[add.concat("",select_code[i])] = row.incident_type;
 						}
 					}
 				} 
-
 				//generic pull, all codes included 
 				else{
 					codes[add.concat("",row.code)] = row.incident_type;
@@ -76,7 +69,8 @@ app.get('/codes',(req,res) =>{
 		if(req.query.hasOwnProperty("format"))
 		{
 			//to be edited with the xml stuff
-			console.log("if statement");
+			let xml  = js2xmlparser.parse("codes",codes);
+			res.type('xml').send(xml);
 		}
 		else{
 			res.type('json').send(codes);
@@ -88,7 +82,7 @@ app.get('/codes',(req,res) =>{
 app.get('/neighborhoods',(req,res)=>{
 	//url to check for the extra elements:
 	var url = req.url;
-	console.log(url.length);
+	var neighborhoods = new Object();
 	var database_Promise = new Promise ((resolve,reject) =>{
 		db.all('SELECT * FROM Neighborhoods ORDER BY neighborhood_number',(err,rows)=>{
 			rows.forEach(function(row){
@@ -125,9 +119,8 @@ app.get('/neighborhoods',(req,res)=>{
 
 		if(req.query.hasOwnProperty("format"))
 		{
-			//to be edited with the xml stuff
-			console.log("if statement");
-			//edit something to xml 
+			let xml  = js2xmlparser.parse("neighborhoods",neighborhoods);
+			res.type('xml').send(xml);
 		}
 		else{
 			res.type('json').send(neighborhoods);
@@ -141,18 +134,12 @@ app.get('/neighborhoods',(req,res)=>{
 app.get('/incidents',(req,res)=>{
 	//url to check for special formatters: 
 	var url = req.url;
-<<<<<<< HEAD
-
+	var incidents = new Object();
 	var database_Promise = new Promise ((resolve,reject) =>{
 		db.all('SELECT * FROM Incidents ORDER BY case_number DESC LIMIT 10000',(err,rows)=>{
-			//pulling everything from incidents, limiting it to 10000 values to output
-			var count = 0;	//count for the limit less than 10000
-=======
-	var database_Promise = new Promise ((resolve,reject) =>{
-		db.all('SELECT * FROM Incidents ORDER BY case_number DESC LIMIT 10000',(err,rows)=>{
+			
 			//pulling everything from incidents, limiting it to 10000 values to output
 			var count = 0;
->>>>>>> a74a64ac503bb08eb19bd4ca391566db1c62f771
 			rows.forEach(function(row){
 				let add = "I"; 
 				let case_number = add.concat("",row.case_number);
@@ -258,13 +245,7 @@ app.get('/incidents',(req,res)=>{
 				else if(url.length > 10 && req.query.hasOwnProperty("limit"))
 				{	
 					//since we are in a db pull, we can just count each row until the limit is reached 
-<<<<<<< HEAD
-=======
-					//console.log("in limit else");
->>>>>>> a74a64ac503bb08eb19bd4ca391566db1c62f771
 					let limit = req.query.limit;
-					//console.log("limit is: " + limit);
-					//console.log("count is : " + count);
 
 					if(count < limit)
 					{	
@@ -281,7 +262,6 @@ app.get('/incidents',(req,res)=>{
 					count++;
 				}
 
-<<<<<<< HEAD
 				//generic pull, all information included:
 				else
 				{
@@ -293,21 +273,9 @@ app.get('/incidents',(req,res)=>{
 					incidents[case_number]["police_grid"] = row.police_grid;
 					incidents[case_number]["neighborhood_number"] = row.neighborhood_number;
 					incidents[case_number]["block"] = row.block;
-=======
-				else{
 
-						incidents[case_number] = new Object();
-						incidents[case_number]["date"] = date_time[0];
-						incidents[case_number]["time"] = date_time[1];
-						incidents[case_number]["code"] = row.code;
-						incidents[case_number]["incident"] = row.incident;
-						incidents[case_number]["police_grid"] = row.police_grid;
-						incidents[case_number]["neighborhood_number"] = row.neighborhood_number;
-						incidents[case_number]["block"] = row.block;
-
->>>>>>> a74a64ac503bb08eb19bd4ca391566db1c62f771
 				}
-				
+
 			})
 			resolve(incidents);
 		});
@@ -317,9 +285,8 @@ app.get('/incidents',(req,res)=>{
 
 		if(req.query.hasOwnProperty("format"))
 		{
-			//to be edited with the xml stuff
-
-			console.log("if statement"); 
+			let xml  = js2xmlparser.parse("incidents",incidents);
+			res.type('xml').send(xml);
 		}
 		else
 		{
@@ -334,7 +301,8 @@ app.put('new-incident',(req,res)=>{
 
 	var new_incident = new Object();
 	var new_casenum = parseInt(req.body.case_number,10)
-	var date_time = req.body.date_time.split("T");
+	var date = req.body.date
+	var time = req.body.time;
 
 	var new_code = parseInt(req.body.code,10);
 	var new_incident = req.body.incident;
@@ -343,8 +311,8 @@ app.put('new-incident',(req,res)=>{
 	var new_block = req.body.block;
 
 	new_incident[new_casenum] = new Object();
-	new_incident[new_casenum][date] = date_time[0];
-	new_incident[new_casenum][time] = date_time[1]
+	new_incident[new_casenum][date] = date;
+	new_incident[new_casenum][time] = time;
 	new_incident[new_casenum][code] = new_code;
 	new_incident[new_casenum][incident] = new_incident;
 	new_incident[new_casenum][police_grid] = new_grid;
