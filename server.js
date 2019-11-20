@@ -297,31 +297,41 @@ app.get('/incidents',(req,res)=>{
 }); //app.get(Incidents)
 
 //PUT /new-incident
-app.put('new-incident',(req,res)=>{
+app.put('/new-incident',(req,res)=>{
 
 	var new_incident = new Object();
-	var new_casenum = parseInt(req.body.case_number,10)
+	var new_casenum = parseInt(req.body.case_number,10);
+	var copy_casenum = new_casenum;
 	var date = req.body.date
 	var time = req.body.time;
 
 	var new_code = parseInt(req.body.code,10);
-	var new_incident = req.body.incident;
+	var new_incident_type = req.body.incident;
 	var new_grid = parseInt(req.body.police_grid,10);
 	var new_neighborhood = parseInt(req.body.neighborhood_number,10);
 	var new_block = req.body.block;
 
 	new_incident[new_casenum] = new Object();
-	new_incident[new_casenum][date] = date;
-	new_incident[new_casenum][time] = time;
-	new_incident[new_casenum][code] = new_code;
-	new_incident[new_casenum][incident] = new_incident;
-	new_incident[new_casenum][police_grid] = new_grid;
-	new_incident[new_casenum][neighborhood_number]=new_neighborhood;
-	new_incident[new_casenum][block] = new_block;
+	new_incident[new_casenum]["date"] = date;
+	new_incident[new_casenum]["time"] = time;
+	new_incident[new_casenum]["code"] = new_code;
+	new_incident[new_casenum]["incident"] = new_incident;
+	new_incident[new_casenum]["police_grid"] = new_grid;
+	new_incident[new_casenum]["neighborhood_number"]=new_neighborhood;
+	new_incident[new_casenum]["block"] = new_block;
+
+	new_datetime = date.concat("T",time);
 
 	var incident_pull = new Promise((resolve,reject) =>{
-		db.all('SELECT case_number FROM Incidents ORDER BY case_number DESC',(err,rows)=>{
+		db.all('SELECT * FROM Incidents ORDER BY case_number DESC',(err,rows)=>{
 			rows.forEach(function(row){
+
+				var incidents = new Object ();
+				let add = "I"; 
+				let case_number = add.concat("",row.case_number);
+				//date_time split by the T to have the date and time separately
+				let date_time = row.date_time.split("T");	
+
 				//error checking for a pre-existing case number trying to be inserted: 
 				if(new_casenum == row.case_number)
 				{
@@ -329,30 +339,47 @@ app.put('new-incident',(req,res)=>{
 	    			res.write('Error: case number already within database: ' + new_casenum);
 	    			res.end();
 				}
+
+				incidents[case_number] = new Object();
+				incidents[case_number]["date"] = date_time[0];
+				incidents[case_number]["time"] = date_time[1];
+				incidents[case_number]["code"] = row.code;
+				incidents[case_number]["incident"] = row.incident;
+				incidents[case_number]["police_grid"] = row.police_grid;
+				incidents[case_number]["neighborhood_number"] = row.neighborhood_number;
+				incidents[case_number]["block"] = row.block;
+
 			})
-			resolve(incidents);
+			console.log("before resolve");
+			resolve();
 		})
 	}); //database promise
 
 	//we've already checked the casenumber, now insert into the table:
 	incident_pull.then(data =>{
 
-		db.run('INSERT INTO Incidents(case_number,date,time,code,incident,police_grid,neighborhood_number,block) VALUES(new_casenum,date_time[0],date_time[1],new_code,new_incident,new_grid,new_neighborhood,new_block', ['C'],function(err){
+		var pull_Promise = new Promise((resolve,reject) =>{
+			db.run('INSERT INTO Incidents(case_number,date_time,code,incident,police_grid,neighborhood_number,block) VALUES(case_number,new_datetime,new_code,new_incident,new_grid,new_neighborhood,new_block)', ['C'],function(err){
 			//check if there is already a case number that matches the one to be inserted in the db
-			if(err)
-			{
-				res.writeHead(404, {'Content-Type': 'text/plain'});
-    			res.write('Error: could not write to database');
-    			res.end();
-			}	
-			else
-			{
-				res.writeHead({'Content-Type':'text/plain'})
-				res.write('Input to database successful!');
-				res.end();
-			}
+			//
+				console.log("error is " + err);
+
+				if(err)
+				{
+					res.writeHead(404, {'Content-Type': 'text/plain'});
+    				res.write('Error: could not write to database\n');
+    				res.end();
+				}	
 		
-		}) //db run
+			});//db run
+
+		}).then(data=>{
+
+			res.writeHead({'Content-Type':'text/plain'})
+			res.write('Input to database successful!');
+			res.end();
+			
+		})
 
 	}); //incident_pull.then
 
