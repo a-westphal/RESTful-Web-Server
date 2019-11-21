@@ -28,8 +28,6 @@ var db = new sqlite3.Database(db_filename, sqlite3.OPEN_READWRITE, (err) => {
 app.use(express.static(public_dir));
 app.use(bodyParser.urlencoded({extended: true}));
 
-/*	JSON objects for the codes, neighborhoods and incidents to be filled
-	by database pulls */ 
 
 //GET /codes
 app.get('/codes',(req,res) =>{
@@ -76,7 +74,7 @@ app.get('/codes',(req,res) =>{
 			res.type('json').send(codes);
 		} 
 	})
-}); //app.get(Codes)
+}); //app.get(codes)
 
 //GET /neighborhoods
 app.get('/neighborhoods',(req,res)=>{
@@ -114,7 +112,7 @@ app.get('/neighborhoods',(req,res)=>{
 	}) //database promise 
 
 	database_Promise.then(data => {
-		//check if the query string specifies the format type here (to be added later)
+		//check if the query string specifies the format type here
 		let formatter = "json";
 
 		if(req.query.hasOwnProperty("format"))
@@ -281,8 +279,8 @@ app.get('/incidents',(req,res)=>{
 		});
 	})//database Promise 
 	database_Promise.then(data =>{
-		//check if the query string specifies the format type here
 
+		//check if the query string specifies the format type 
 		if(req.query.hasOwnProperty("format"))
 		{
 			let xml  = js2xmlparser.parse("incidents",incidents);
@@ -324,10 +322,10 @@ app.put('/new-incident',(req,res)=>{
 				let date_time = row.date_time.split("T");	
 
 				//error checking for a pre-existing case number trying to be inserted: 
-			/*	if(new_casenum == row.case_number)
+				if(new_casenum == row.case_number)
 				{
 					reject(new_casenum);
-				}*/ 
+				}
 
 				incidents[case_number] = new Object();
 				incidents[case_number]["date"] = date_time[0];
@@ -346,26 +344,30 @@ app.put('/new-incident',(req,res)=>{
 	//we've already checked the casenumber, now insert into the table:
 	incident_pull.then(data =>{
 
-		
-
 		var pull_Promise = new Promise((resolve,reject) =>{
 			db.run('INSERT INTO Incidents(case_number,date_time,code,incident,police_grid,neighborhood_number,block) VALUES(?,?,?,?,?,?,?)', [new_casenum,new_datetime,new_code,new_incident_type,new_grid,new_neighborhood,new_block],function(err){
 			//check if there is already a case number that matches the one to be inserted in the db
-
-				console.log(err);
 				if(err)
 				{
 					res.writeHead(404, {'Content-Type': 'text/plain'});
     				res.write('Error: could not write to database\n');
     				res.end();
 				}	
-			
-		
+
+				else{
+					res.writeHead(200,{'Content-Type': 'text/plain'});
+    				res.write('Input successful!\n');
+    				res.end();
+				}
+	
 			});//db run
 
 		})
 
-	})
+	}).catch((err)=>{
+		FoundMatchingCasenum(res,new_casenum);
+	});
+
 
 });//app.PUT
 
